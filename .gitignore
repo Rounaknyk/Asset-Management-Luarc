@@ -3,6 +3,4 @@ dist/
 .env
 *.log
 .DS_Store
-/.npmrc
-/.nvmrc
-./REFERENCE.md
+REFERENCE.md
