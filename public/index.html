@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asset Manager</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: #2c3e50;
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 { font-size: 1.5rem; }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .user-info span { opacity: 0.9; }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover { opacity: 0.9; }
+    .btn-primary { background: #3498db; color: white; }
+    .btn-success { background: #27ae60; color: white; }
+    .btn-danger { background: #e74c3c; color: white; }
+    .btn-secondary { background: #95a5a6; color: white; }
+    .btn-warning { background: #f39c12; color: white; }
+    .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .auth-container {
+      max-width: 400px;
+      margin: 100px auto;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .auth-container h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #2c3e50;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: #3498db;
+    }
+
+    .auth-toggle {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+    }
+
+    .auth-toggle a {
+      color: #3498db;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 10px 25px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      color: #666;
+      border-radius: 6px 6px 0 0;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: #3498db;
+      color: white;
+    }
+
+    .tab:hover:not(.active) { background: #f0f0f0; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .card-header h3 { color: #2c3e50; }
+
+    .badge {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .badge-success { background: #d4edda; color: #155724; }
+    .badge-danger { background: #f8d7da; color: #721c24; }
+    .badge-info { background: #d1ecf1; color: #0c5460; }
+
+    .asset-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .asset-stat {
+      text-align: center;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+
+    .asset-stat .value {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .asset-stat .label {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .message {
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+
+    .message-success { background: #d4edda; color: #155724; }
+    .message-error { background: #f8d7da; color: #721c24; }
+
+    .create-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .create-form .full-width { grid-column: 1 / -1; }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #666;
+    }
+
+    .empty-state svg {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+
+    .claim-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    .claim-item .claim-info h4 { color: #2c3e50; }
+    .claim-item .claim-info p { color: #666; font-size: 0.9rem; }
+    .claim-item .claim-value { font-size: 1.25rem; font-weight: 600; color: #27ae60; }
+
+    .hidden { display: none !important; }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .history-item {
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .history-item .email { font-weight: 500; color: #2c3e50; }
+    .history-item .date { font-size: 0.85rem; color: #666; }
+
+    @media (max-width: 600px) {
+      .create-form { grid-template-columns: 1fr; }
+      .asset-details { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="auth-view">
+  <div class="auth-container">
+    <h2 id="auth-title">Sign In</h2>
+    <div id="auth-message"></div>
+    <form id="auth-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" required minlength="8">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%">Sign In</button>
+    </form>
+    <p class="auth-toggle">
+      <span id="toggle-text">Don't have an account?</span>
+      <a id="toggle-auth">Create one</a>
+    </p>
+  </div>
+</div>
+
+<div id="app-view" class="hidden">
+  <header>
+    <h1>Asset Manager</h1>
+    <div class="user-info">
+      <span id="user-email"></span>
+      <button class="btn btn-secondary" id="logout-btn">Logout</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" data-panel="pool">All Assets</button>
+      <button class="tab" data-panel="claims">My Claims</button>
+      <button class="tab" data-panel="create">Create Asset</button>
+    </div>
+
+    <div id="app-message"></div>
+
+    <div id="pool" class="panel active">
+      <div id="pool-list"></div>
+    </div>
+
+    <div id="claims" class="panel">
+      <div id="claims-list"></div>
+    </div>
+
+    <div id="create" class="panel">
+      <div class="card">
+        <h3 style="margin-bottom: 20px">Create New Asset</h3>
+        <form id="create-form" class="create-form">
+          <div class="form-group">
+            <label for="code">Code</label>
+            <input type="text" id="code" required placeholder="SUMMER2026">
+          </div>
+          <div class="form-group">
+            <label for="value">Value ($)</label>
+            <input type="number" id="value" required min="0.01" step="0.01" placeholder="25.00">
+          </div>
+          <div class="form-group">
+            <label for="maxClaims">Max Claims</label>
+            <input type="number" id="maxClaims" required min="1" placeholder="100">
+          </div>
+          <div class="form-group">
+            <label for="expiresAt">Expires At (optional)</label>
+            <input type="datetime-local" id="expiresAt">
+          </div>
+          <div class="form-group full-width">
+            <label for="description">Description</label>
+            <textarea id="description" rows="3" placeholder="Describe this asset..."></textarea>
+          </div>
+          <div class="full-width">
+            <button type="submit" class="btn btn-success">Create Asset</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-container"></div>
+
+<script>
+const API = '';
+let token = localStorage.getItem('token');
+let userEmail = localStorage.getItem('userEmail');
+let isLoginMode = true;
+
+const $ = id => document.getElementById(id);
+
+console.log('%c[DEV MODE] API curl commands are logged below for testing purposes only. This will not be shown in production.', 'background: #f39c12; color: black; padding: 8px; font-weight: bold; border-radius: 4px;');
+
+function logCurl(method, path, body = null) {
+  const baseUrl = window.location.origin;
+  let curl = `curl -X ${method} "${baseUrl}${path}"`;
+
+  if (token) {
+    curl += ` \\\n  -H "Authorization: Bearer ${token}"`;
+  }
+
+  if (body) {
+    curl += ` \\\n  -H "Content-Type: application/json"`;
+    curl += ` \\\n  -d '${JSON.stringify(body)}'`;
+  }
+
+  console.log('%c[DEV] curl command for testing (not shown in production):', 'color: #3498db; font-weight: bold;');
+  console.log(curl);
+  console.log('---');
+}
+
+function showMessage(containerId, text, isError = false) {
+  const container = $(containerId);
+  container.innerHTML = `<div class="message ${isError ? 'message-error' : 'message-success'}">${text}</div>`;
+  setTimeout(() => container.innerHTML = '', 4000);
+}
+
+async function api(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const method = options.method || 'GET';
+  const body = options.body ? JSON.parse(options.body) : null;
+
+  logCurl(method, path, body);
+
+  const res = await fetch(API + path, { ...options, headers });
+  const data = await res.json();
+
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+function updateAuthView() {
+  $('auth-title').textContent = isLoginMode ? 'Sign In' : 'Create Account';
+  $('toggle-text').textContent = isLoginMode ? "Don't have an account?" : 'Already have an account?';
+  $('toggle-auth').textContent = isLoginMode ? 'Create one' : 'Sign in';
+  $('auth-form').querySelector('button').textContent = isLoginMode ? 'Sign In' : 'Create Account';
+}
+
+function showApp() {
+  $('auth-view').classList.add('hidden');
+  $('app-view').classList.remove('hidden');
+  $('user-email').textContent = userEmail;
+  loadPool();
+}
+
+function showAuth() {
+  $('auth-view').classList.remove('hidden');
+  $('app-view').classList.add('hidden');
+  token = null;
+  userEmail = null;
+  localStorage.removeItem('token');
+  localStorage.removeItem('userEmail');
+}
+
+function closeModal() {
+  $('modal-container').innerHTML = '';
+}
+
+$('auth-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const email = $('email').value;
+  const password = $('password').value;
+
+  try {
+    if (isLoginMode) {
+      const data = await api('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+      token = data.token;
+      userEmail = email;
+      localStorage.setItem('token', token);
+      localStorage.setItem('userEmail', email);
+      showApp();
+    } else {
+      await api('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+      showMessage('auth-message', 'Account created! Please sign in.');
+      isLoginMode = true;
+      updateAuthView();
+    }
+  } catch (err) {
+    showMessage('auth-message', err.message, true);
+  }
+};
+
+$('toggle-auth').onclick = () => {
+  isLoginMode = !isLoginMode;
+  updateAuthView();
+};
+
+$('logout-btn').onclick = showAuth;
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    $(tab.dataset.panel).classList.add('active');
+
+    if (tab.dataset.panel === 'pool') loadPool();
+    if (tab.dataset.panel === 'claims') loadClaims();
+  };
+});
+
+async function loadPool() {
+  try {
+    const assets = await api('/assets/pool');
+
+    if (assets.length === 0) {
+      $('pool-list').innerHTML = `
+        <div class="empty-state">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+          <h3>No assets yet</h3>
+          <p>Create a new asset to get started</p>
+        </div>
+      `;
+      return;
+    }
+
+    $('pool-list').innerHTML = assets.map(asset => `
+      <div class="card">
+        <div class="card-header">
+          <h3>${asset.code}</h3>
+          <span class="badge ${asset.is_available ? 'badge-success' : 'badge-danger'}">
+            ${asset.is_available ? 'Available' : 'Exhausted'}
+          </span>
+        </div>
+        <p style="color: #666; margin-bottom: 15px">${asset.description || 'No description'}</p>
+        <div class="asset-details">
+          <div class="asset-stat">
+            <div class="value">$${parseFloat(asset.value).toFixed(2)}</div>
+            <div class="label">Value</div>
+          </div>
+          <div class="asset-stat">
+            <div class="value">${asset.remaining_claims}</div>
+            <div class="label">Remaining</div>
+          </div>
+          <div class="asset-stat">
+            <div class="value">${asset.current_claims}/${asset.max_claims}</div>
+            <div class="label">Claimed</div>
+          </div>
+          <div class="asset-stat">
+            <div class="value">v${asset.version}</div>
+            <div class="label">Version</div>
+          </div>
+        </div>
+        <div class="btn-group">
+          ${asset.is_available ? `<button class="btn btn-primary btn-sm" onclick="claimAsset(${asset.id})">Claim</button>` : ''}
+          <button class="btn btn-secondary btn-sm" onclick="viewAsset(${asset.id})">View Details</button>
+          <button class="btn btn-warning btn-sm" onclick="showEditModal(${asset.id})">Edit</button>
+          <button class="btn btn-info btn-sm" onclick="viewHistory(${asset.id})">History</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    showMessage('app-message', err.message, true);
+  }
+}
+
+async function loadClaims() {
+  try {
+    const claims = await api('/assets/my-claims');
+
+    if (claims.length === 0) {
+      $('claims-list').innerHTML = `
+        <div class="empty-state">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          <h3>No claims yet</h3>
+          <p>Claim an asset from the pool to see it here</p>
+        </div>
+      `;
+      return;
+    }
+
+    $('claims-list').innerHTML = `
+      <div class="card">
+        <h3 style="margin-bottom: 20px">Your Claims</h3>
+        ${claims.map(claim => `
+          <div class="claim-item">
+            <div class="claim-info">
+              <h4>${claim.asset_code}</h4>
+              <p>${claim.asset_description || 'No description'}</p>
+              <p>Claimed: ${new Date(claim.claimed_at).toLocaleString()}</p>
+            </div>
+            <div class="claim-value">$${parseFloat(claim.asset_value).toFixed(2)}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } catch (err) {
+    showMessage('app-message', err.message, true);
+  }
+}
+
+async function claimAsset(id) {
+  try {
+    await api(`/assets/${id}/claim`, { method: 'POST' });
+    showMessage('app-message', 'Asset claimed successfully!');
+    loadPool();
+  } catch (err) {
+    showMessage('app-message', err.message, true);
+  }
+}
+
+async function viewAsset(id) {
+  try {
+    const asset = await api(`/assets/${id}`);
+
+    $('modal-container').innerHTML = `
+      <div class="modal" onclick="if(event.target === this) closeModal()">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Asset Details: ${asset.code}</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+          </div>
+          <div class="asset-details">
+            <div class="asset-stat">
+              <div class="value">$${parseFloat(asset.value).toFixed(2)}</div>
+              <div class="label">Value</div>
+            </div>
+            <div class="asset-stat">
+              <div class="value">${asset.max_claims - asset.current_claims}</div>
+              <div class="label">Remaining</div>
+            </div>
+            <div class="asset-stat">
+              <div class="value">${asset.current_claims}</div>
+              <div class="label">Claimed</div>
+            </div>
+            <div class="asset-stat">
+              <div class="value">v${asset.version}</div>
+              <div class="label">Version</div>
+            </div>
+          </div>
+          <p><strong>Description:</strong> ${asset.description || 'No description'}</p>
+          <p><strong>Created:</strong> ${new Date(asset.created_at).toLocaleString()}</p>
+          <p><strong>Expires:</strong> ${asset.expires_at ? new Date(asset.expires_at).toLocaleString() : 'Never'}</p>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    showMessage('app-message', err.message, true);
+  }
+}
+
+async function showEditModal(id) {
+  try {
+    const asset = await api(`/assets/${id}`);
+
+    $('modal-container').innerHTML = `
+      <div class="modal" onclick="if(event.target === this) closeModal()">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Edit Asset: ${asset.code}</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+          </div>
+          <form id="edit-form" class="create-form" style="grid-template-columns: 1fr;">
+            <input type="hidden" id="edit-id" value="${asset.id}">
+            <input type="hidden" id="edit-version" value="${asset.version}">
+            <div class="form-group">
+              <label>Description</label>
+              <textarea id="edit-description" rows="3">${asset.description || ''}</textarea>
+            </div>
+            <div class="form-group">
+              <label>Value ($)</label>
+              <input type="number" id="edit-value" min="0.01" step="0.01" value="${asset.value}">
+            </div>
+            <div class="form-group">
+              <label>Max Claims</label>
+              <input type="number" id="edit-maxClaims" min="1" value="${asset.max_claims}">
+            </div>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+              Current version: <strong>v${asset.version}</strong> (used for optimistic locking)
+            </p>
+            <button type="submit" class="btn btn-success">Update Asset</button>
+          </form>
+        </div>
+      </div>
+    `;
+
+    $('edit-form').onsubmit = async (e) => {
+      e.preventDefault();
+      await updateAsset();
+    };
+  } catch (err) {
+    showMessage('app-message', err.message, true);
+  }
+}
+
+async function updateAsset() {
+  const id = $('edit-id').value;
+  const version = parseInt($('edit-version').value);
+
+  const body = {
+    description: $('edit-description').value,
+    value: parseFloat($('edit-value').value),
+    maxClaims: parseInt($('edit-maxClaims').value),
+    version: version
+  };
+
+  try {
+    await api(`/assets/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body)
+    });
+    closeModal();
+    showMessage('app-message', 'Asset updated successfully!');
+    loadPool();
+  } catch (err) {
+    showMessage('app-message', err.message, true);
+  }
+}
+
+async function viewHistory(id) {
+  try {
+    const data = await api(`/assets/${id}/history`);
+
+    $('modal-container').innerHTML = `
+      <div class="modal" onclick="if(event.target === this) closeModal()">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Claim History: ${data.asset.code}</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+          </div>
+          ${data.claims.length === 0
+            ? '<p style="color: #666; text-align: center; padding: 20px;">No claims yet</p>'
+            : data.claims.map(claim => `
+                <div class="history-item">
+                  <div class="email">${claim.user_email}</div>
+                  <div class="date">Claimed: ${new Date(claim.claimed_at).toLocaleString()}</div>
+                </div>
+              `).join('')
+          }
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    showMessage('app-message', err.message, true);
+  }
+}
+
+$('create-form').onsubmit = async (e) => {
+  e.preventDefault();
+
+  const body = {
+    code: $('code').value,
+    description: $('description').value,
+    value: parseFloat($('value').value),
+    maxClaims: parseInt($('maxClaims').value)
+  };
+
+  const expiresAt = $('expiresAt').value;
+  if (expiresAt) body.expiresAt = new Date(expiresAt).toISOString();
+
+  try {
+    await api('/assets', { method: 'POST', body: JSON.stringify(body) });
+    showMessage('app-message', 'Asset created successfully!');
+    $('create-form').reset();
+    document.querySelector('[data-panel="pool"]').click();
+  } catch (err) {
+    showMessage('app-message', err.message, true);
+  }
+};
+
+if (token) {
+  showApp();
+} else {
+  updateAuthView();
+}
+</script>
+
+</body>
+</html>
