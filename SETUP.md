@@ -79,7 +79,8 @@ luarc/
 │   │   └── asset.routes.ts    # Asset CRUD endpoints
 │   ├── services/
 │   │   ├── auth.service.ts    # User auth logic
-│   │   └── asset.service.ts   # Asset + claim logic
+│   │   ├── asset.service.ts   # Asset + claim logic
+│   │   └── ws.service.ts      # WebSocket event broadcasting
 │   └── types/
 │       └── index.ts           # TypeScript interfaces
 ├── public/
@@ -152,6 +153,18 @@ curl http://localhost:3000/assets/my-claims \
 curl http://localhost:3000/assets/1/history \
   -H "Authorization: Bearer $TOKEN"
 ```
+
+### Real-Time Events (WebSocket)
+
+```bash
+# Connect via wscat (install with: npm i -g wscat)
+wscat -c "ws://localhost:3000?token=$TOKEN"
+```
+
+Events broadcasted:
+- `asset:created` - New asset added
+- `asset:claimed` - Asset claimed by user
+- `asset:updated` - Asset details modified
 
 ## Database Schema
 

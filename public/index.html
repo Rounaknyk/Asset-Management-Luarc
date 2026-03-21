@@ -291,6 +291,48 @@
     .history-item .email { font-weight: 500; color: #2c3e50; }
     .history-item .date { font-size: 0.85rem; color: #666; }
 
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #e74c3c;
+    }
+
+    .live-dot.connected {
+      background: #27ae60;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 15px 20px;
+      background: #2c3e50;
+      color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      animation: slideIn 0.3s ease;
+      z-index: 1001;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
     @media (max-width: 600px) {
       .create-form { grid-template-columns: 1fr; }
       .asset-details { grid-template-columns: 1fr 1fr; }
@@ -325,6 +367,10 @@
   <header>
     <h1>Asset Manager</h1>
     <div class="user-info">
+      <div class="live-indicator">
+        <div id="live-dot" class="live-dot"></div>
+        <span id="live-status">Connecting...</span>
+      </div>
       <span id="user-email"></span>
       <button class="btn btn-secondary" id="logout-btn">Logout</button>
     </div>
@@ -510,7 +556,12 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 async function loadPool() {
   try {
-    const assets = await api('/assets/pool');
+    const [assets, myClaims] = await Promise.all([
+      api('/assets/pool'),
+      api('/assets/my-claims')
+    ]);
+
+    const claimedAssetIds = new Set(myClaims.map(c => c.asset_id));
 
     if (assets.length === 0) {
       $('pool-list').innerHTML = `
@@ -525,12 +576,16 @@ async function loadPool() {
       return;
     }
 
-    $('pool-list').innerHTML = assets.map(asset => `
+    $('pool-list').innerHTML = assets.map(asset => {
+      const alreadyClaimed = claimedAssetIds.has(asset.id);
+      const canClaim = asset.is_available && !alreadyClaimed;
+
+      return `
       <div class="card">
         <div class="card-header">
           <h3>${asset.code}</h3>
-          <span class="badge ${asset.is_available ? 'badge-success' : 'badge-danger'}">
-            ${asset.is_available ? 'Available' : 'Exhausted'}
+          <span class="badge ${alreadyClaimed ? 'badge-info' : asset.is_available ? 'badge-success' : 'badge-danger'}">
+            ${alreadyClaimed ? 'Claimed by you' : asset.is_available ? 'Available' : 'Exhausted'}
           </span>
         </div>
         <p style="color: #666; margin-bottom: 15px">${asset.description || 'No description'}</p>
@@ -553,13 +608,13 @@ async function loadPool() {
           </div>
         </div>
         <div class="btn-group">
-          ${asset.is_available ? `<button class="btn btn-primary btn-sm" onclick="claimAsset(${asset.id})">Claim</button>` : ''}
+          ${canClaim ? `<button class="btn btn-primary btn-sm" onclick="claimAsset(${asset.id})">Claim</button>` : ''}
           <button class="btn btn-secondary btn-sm" onclick="viewAsset(${asset.id})">View Details</button>
           <button class="btn btn-warning btn-sm" onclick="showEditModal(${asset.id})">Edit</button>
           <button class="btn btn-info btn-sm" onclick="viewHistory(${asset.id})">History</button>
         </div>
       </div>
-    `).join('');
+    `}).join('');
   } catch (err) {
     showMessage('app-message', err.message, true);
   }
@@ -771,11 +826,97 @@ $('create-form').onsubmit = async (e) => {
   }
 };
 
+let ws = null;
+
 if (token) {
   showApp();
+  connectWebSocket();
 } else {
   updateAuthView();
 }
+
+function connectWebSocket() {
+  if (ws) {
+    ws.close();
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${protocol}//${window.location.host}?token=${token}`);
+
+  ws.onopen = () => {
+    $('live-dot').classList.add('connected');
+    $('live-status').textContent = 'Live';
+    console.log('%c[WS] Connected to real-time events', 'color: #27ae60; font-weight: bold;');
+  };
+
+  ws.onclose = () => {
+    $('live-dot').classList.remove('connected');
+    $('live-status').textContent = 'Disconnected';
+    console.log('%c[WS] Connection closed', 'color: #e74c3c;');
+    setTimeout(() => {
+      if (token) connectWebSocket();
+    }, 3000);
+  };
+
+  ws.onerror = () => {
+    console.log('%c[WS] Connection error', 'color: #e74c3c;');
+  };
+
+  ws.onmessage = (e) => {
+    const { event, data } = JSON.parse(e.data);
+
+    switch (event) {
+      case 'connected':
+        console.log(`%c[WS] Connected (${data.clients} clients online)`, 'color: #3498db;');
+        break;
+
+      case 'asset:created':
+        console.log('%c[WS] New asset created:', 'color: #27ae60;', data.code);
+        showToast(`New asset created: ${data.code}`);
+        if ($('pool').classList.contains('active')) loadPool();
+        break;
+
+      case 'asset:claimed':
+        console.log('%c[WS] Asset claimed:', 'color: #f39c12;', data.asset.code);
+        showToast(`${data.asset.code} was claimed (${data.asset.current_claims}/${data.asset.max_claims})`);
+        if ($('pool').classList.contains('active')) loadPool();
+        break;
+
+      case 'asset:updated':
+        console.log('%c[WS] Asset updated:', 'color: #3498db;', data.code);
+        showToast(`${data.code} was updated to v${data.version}`);
+        if ($('pool').classList.contains('active')) loadPool();
+        break;
+    }
+  };
+}
+
+function disconnectWebSocket() {
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
+}
+
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+const originalShowAuth = showAuth;
+showAuth = function() {
+  disconnectWebSocket();
+  originalShowAuth();
+};
+
+const originalShowApp = showApp;
+showApp = function() {
+  originalShowApp();
+  connectWebSocket();
+};
 </script>
 
 </body>

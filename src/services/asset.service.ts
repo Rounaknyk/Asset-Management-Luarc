@@ -1,6 +1,7 @@
 import { PoolClient } from 'pg';
 import { query, queryOne, transaction } from '../config/database.js';
 import { Asset, Claim, ClaimWithAsset, AssetPoolItem } from '../types/index.js';
+import { broadcast } from './ws.service.js';
 
 export async function createAsset(
   code: string,
@@ -14,6 +15,7 @@ export async function createAsset(
      VALUES ($1, $2, $3, $4, $5) RETURNING *`,
     [code, description, value, maxClaims, expiresAt || null]
   );
+  broadcast('asset:created', assets[0]);
   return assets[0];
 }
 
@@ -58,6 +60,12 @@ export async function claimAsset(userId: number, assetId: number): Promise<Claim
       [userId, assetId]
     );
 
+    const updatedAsset = await client.query<Asset>(
+      'SELECT * FROM assets WHERE id = $1',
+      [assetId]
+    );
+    broadcast('asset:claimed', { claim: claimResult.rows[0], asset: updatedAsset.rows[0] });
+
     return claimResult.rows[0];
   });
 }
@@ -95,6 +103,7 @@ export async function updateAsset(
       throw new Error('Concurrent modification detected');
     }
 
+    broadcast('asset:updated', result.rows[0]);
     return result.rows[0];
   });
 }
