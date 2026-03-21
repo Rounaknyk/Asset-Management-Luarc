@@ -200,6 +200,46 @@ CREATE TABLE claims (
 );
 ```
 
+## Relational Queries
+
+### User's Claim History (JOIN: claims + assets)
+```sql
+SELECT c.*, a.code, a.description, a.value
+FROM claims c
+JOIN assets a ON c.asset_id = a.id
+WHERE c.user_id = $1
+ORDER BY c.claimed_at DESC;
+```
+Returns user's claims with full asset details in one query.
+
+### Asset Claim History (JOIN: claims + users)
+```sql
+SELECT c.user_id, u.email, c.claimed_at
+FROM claims c
+JOIN users u ON c.user_id = u.id
+WHERE c.asset_id = $1
+ORDER BY c.claimed_at DESC;
+```
+Returns who claimed an asset with their email addresses.
+
+### Asset Pool with Filters
+```sql
+SELECT *,
+  (current_claims < max_claims AND (expires_at IS NULL OR expires_at > NOW())) as is_available,
+  (max_claims - current_claims) as remaining_claims
+FROM assets
+WHERE value >= $1 AND value <= $2
+ORDER BY created_at DESC;
+```
+Returns assets with computed availability and remaining claims.
+
+### Indexes for Performance
+```sql
+CREATE INDEX idx_claims_user ON claims(user_id);
+CREATE INDEX idx_claims_asset ON claims(asset_id);
+CREATE INDEX idx_assets_available ON assets(current_claims, max_claims);
+```
+
 ## Key Concepts
 
 ### Pessimistic Locking (Claims)
